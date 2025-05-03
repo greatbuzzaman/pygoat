@@ -1,3 +1,83 @@
+# name: CI
+
+# on: [push]
+
+# jobs:
+#   sast_scan:
+#     name: Run Bandit Scan
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name:  Chekout Code
+#       uses:  actions/checkout@v2
+
+#     - name: Setup Python
+#       uses: actions/setup-python@v2
+#       with: 
+#         pythin_version: 3.8
+
+#     - name: install Bandit
+#       run: pip install bandit
+
+#     - name: Run Bandit Scan
+#       run: bandit -ll -ii -r . -f json -o bandit-report.json
+
+#     - name: upload atrifact
+#       uses: actions/upload-artifact@v4.6.2
+#       if: always()
+#       with:
+#         name: bandit-findings
+#         path: bandit-report.json
+        
+#   image_scan:
+#     name: Build Image and Run Docker Image Scan
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name:  Chekout Code
+#       uses:  actions/checkout@v2
+
+#     - name: setup docker
+#       uses: docker/setup-docker-action@v4.3.0
+#       with: 
+#          version: 'v24.0.9'
+    
+#     - name:  Build Docker Image
+#       run:  docker build -f Dockerfile -t myapp:latest .
+      
+#     - name: Docker Scout
+#       uses: docker/scout-action@v1.17.1
+#       with:
+#         dockerhub-user:  ${{ secrets.REPO_USER }}
+#         dockerhub-password:  ${{ secrets.REPO_SECRET }}
+#         command:  quickview, cves
+#         only-severities:  critical, high
+#         sarif-file: scout-report.sarif
+#         exit-code:  True
+        
+#     - name: Upload docker-scout-findings atrifact
+#       uses: actions/upload-artifact@v4.6.2
+#       if: always()
+#       with:
+#         name: docker-scout-findings
+#         path: scout-report.sarif
+        
+#     # - name: Docker Scout Scan
+#     #   run: |
+#     #     curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
+#     #     sh install-scout.sh
+
+#     #     echo ${{ secrets.REPO_SECRET }} | docker login -u ${{ secrets.REPO_USER }} --password-stdin
+        
+#     #     docker scout quickview
+#     #     docker scout cves
+#     - name: Run Trivy scan
+#       uses: aquasecurity/trivy-action@master
+#       with:
+#           image-ref: myapp:latest
+#           exit-code: 1
+#           severity: CRITICAL,HIGH
+
 name: CI
 
 on: [push]
@@ -8,73 +88,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name:  Chekout Code
-      uses:  actions/checkout@v2
+    - name: Checkout Code
+      uses: actions/checkout@v2
 
     - name: Setup Python
       uses: actions/setup-python@v2
-      with: 
-        pythin_version: 3.8
+      with:
+        python-version: 3.8
 
-    - name: install Bandit
+    - name: Install Bandit
       run: pip install bandit
 
     - name: Run Bandit Scan
       run: bandit -ll -ii -r . -f json -o bandit-report.json
 
-    - name: upload atrifact
+    - name: Upload Bandit Findings
       uses: actions/upload-artifact@v4.6.2
       if: always()
       with:
         name: bandit-findings
         path: bandit-report.json
-        
+
   image_scan:
-    name: Build Image and Run Docker Image Scan
+    name: Build Image and Run Trivy Scan
     runs-on: ubuntu-latest
 
     steps:
-    - name:  Chekout Code
-      uses:  actions/checkout@v2
+    - name: Checkout Code
+      uses: actions/checkout@v2
 
-    - name: setup docker
+    - name: Set up Docker
       uses: docker/setup-docker-action@v4.3.0
-      with: 
-         version: 'v24.0.9'
-    
-    - name:  Build Docker Image
-      run:  docker build -f Dockerfile -t myapp:latest .
-      
-    - name: Docker Scout
-      uses: docker/scout-action@v1.17.1
       with:
-        dockerhub-user:  ${{ secrets.REPO_USER }}
-        dockerhub-password:  ${{ secrets.REPO_SECRET }}
-        command:  quickview, cves
-        only-severities:  critical, high
-        sarif-file: scout-report.sarif
-        exit-code:  True
-        
-    - name: Upload docker-scout-findings atrifact
+        version: 'v24.0.9'
+
+    - name: Build Docker Image
+      run: docker build -f Dockerfile -t myapp:latest .
+
+    - name: Run Trivy Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: myapp:latest
+        exit-code: 1
+        severity: CRITICAL,HIGH
+        format: sarif
+        output: trivy-report.sarif
+
+    - name: Upload Trivy Findings
       uses: actions/upload-artifact@v4.6.2
       if: always()
       with:
-        name: docker-scout-findings
-        path: scout-report.sarif
-        
-    # - name: Docker Scout Scan
-    #   run: |
-    #     curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
-    #     sh install-scout.sh
-
-    #     echo ${{ secrets.REPO_SECRET }} | docker login -u ${{ secrets.REPO_USER }} --password-stdin
-        
-    #     docker scout quickview
-    #     docker scout cves
-
-    
-    
-      
-
-        
-    
+        name: trivy-findings
+        path: trivy-report.sarif
